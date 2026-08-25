@@ -1,0 +1,17 @@
+build/
+compile_commands.json
+.cache/
+*.o
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+SPEC.md
+raft.pdf
