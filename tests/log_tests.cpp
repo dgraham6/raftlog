@@ -1,8 +1,51 @@
 #include <catch2/catch_test_macros.hpp>
-
+#include <vector>
+#include <cstddef>
 #include "raftlog/log/log.hpp"
+#include "raftlog/log/segment.hpp"
 
-TEST_CASE("scaffold compiles", "[log]") {
-    // Phase 1: replace with real append/read/crash-recovery tests.
-    REQUIRE(true);
+using namespace raftlog::log;
+
+TEST_CASE("put_uint32_t", "[log]")
+{
+    std::vector<std::byte> v;
+    put_u32_le(v, 2);
+    REQUIRE((static_cast<unsigned char>(v[0]) == 0b0010));
+}
+
+TEST_CASE("get_uint32_t_467", "[log]")
+{
+    std::vector<std::byte> v;
+    put_u32_le(v, 467);
+    uint32_t temp = get_u32_le(v, 0);
+    REQUIRE((temp == 467));
+}
+
+TEST_CASE("get_uint32_t", "[log]")
+{
+    std::vector<std::byte> v;
+    put_u32_le(v, 2);
+    uint32_t temp = get_u32_le(v, 0);
+    REQUIRE((temp == 2));
+    put_u32_le(v, 467);
+    temp = get_u32_le(v, 4);
+    REQUIRE((temp == 467));
+    put_u32_le(v, 1104745215);
+    temp = get_u32_le(v, 8);
+    REQUIRE((temp == 1104745215));
+}
+
+TEST_CASE("encoder size check", "[log]")
+{
+    std::vector<std::byte> temp(2);
+    std::vector<std::byte> encoded = EncodeRecord(temp);
+    REQUIRE(encoded.size() == temp.size() + 8);
+}
+
+TEST_CASE("decoder happy", "[log]")
+{
+    std::vector<std::byte> temp(2);
+    std::vector<std::byte> encoded = EncodeRecord(temp);
+    std::optional<DecodeResponse> resp = DecodeRecord(encoded);
+    REQUIRE(resp);
 }

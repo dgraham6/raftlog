@@ -10,3 +10,6 @@ add_library(raftlog
 target_include_directories(raftlog PUBLIC
   ${CMAKE_SOURCE_DIR}/include
 )
+
+find_package(ZLIB REQUIRED)
+target_link_libraries(raftlog PRIVATE ZLIB::ZLIB)
