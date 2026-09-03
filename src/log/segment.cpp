@@ -40,14 +40,25 @@ namespace raftlog::log
     }
     std::optional<DecodeResponse> DecodeRecord(std::vector<std::byte> record)
     {
+        if (record.size() < 8)
+        {
+            return std::nullopt;
+        }
+
         uint32_t crc = crc32(0L, Z_NULL, 0);
         uint32_t original_crc = get_u32_le(record, 0);
         uint32_t length = get_u32_le(record, 4);
+        uint32_t rsize = record.size() - 8;
+
+        if (rsize != length)
+        {
+            return std::nullopt;
+        }
+
         crc = crc32(crc, reinterpret_cast<unsigned char *>(record.data()) + 8, length);
 
         if (crc != original_crc)
         {
-            std::cout << crc << ' ' << original_crc << '\n';
             return std::nullopt;
         }
 

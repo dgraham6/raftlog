@@ -3,6 +3,7 @@
 #include <cstddef>
 #include "raftlog/log/log.hpp"
 #include "raftlog/log/segment.hpp"
+#include <iostream>
 
 using namespace raftlog::log;
 
@@ -48,4 +49,32 @@ TEST_CASE("decoder happy", "[log]")
     std::vector<std::byte> encoded = EncodeRecord(temp);
     std::optional<DecodeResponse> resp = DecodeRecord(encoded);
     REQUIRE(resp);
+}
+
+TEST_CASE("decoder bad", "[log]")
+{
+    std::vector<std::byte> temp(2);
+    std::vector<std::byte> encoded = EncodeRecord(temp);
+    encoded.pop_back();
+    std::optional<DecodeResponse> resp = DecodeRecord(encoded);
+    REQUIRE(!resp);
+    encoded = EncodeRecord(temp);
+    encoded[2] = std::byte{0b0101};
+    resp = DecodeRecord(encoded);
+    REQUIRE(!resp);
+    encoded = EncodeRecord(temp);
+    encoded[5] = std::byte{0b0101};
+    resp = DecodeRecord(encoded);
+    REQUIRE(!resp);
+    encoded = EncodeRecord(temp);
+    encoded[8] = std::byte{0b0101};
+    resp = DecodeRecord(encoded);
+    REQUIRE(!resp);
+    encoded = EncodeRecord(temp);
+    for (int i = 0; i < 4; ++i)
+    {
+        encoded.pop_back();
+    }
+    resp = DecodeRecord(encoded);
+    REQUIRE(!resp);
 }
