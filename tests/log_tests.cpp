@@ -78,3 +78,22 @@ TEST_CASE("decoder bad", "[log]")
     resp = DecodeRecord(encoded);
     REQUIRE(!resp);
 }
+
+TEST_CASE("append", "[log]")
+{
+    Segment s(std::filesystem::temp_directory_path() / "append_test.log", 0);
+    std::vector<std::byte> p(1, std::byte{0x61});
+    std::uint64_t res = s.Append(p);
+    REQUIRE(res == 0);
+    res = s.Append(p);
+    REQUIRE(res == 1);
+}
+TEST_CASE("read", "[log]")
+{
+    Segment s(std::filesystem::temp_directory_path() / "read_test.log", 0);
+    std::vector<std::byte> p(1, std::byte{0x61});
+    s.Append(p);
+    std::optional<Record> r = s.Read(0);
+    REQUIRE(r);
+    REQUIRE(r->payload == p);
+}

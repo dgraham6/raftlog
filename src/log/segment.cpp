@@ -38,6 +38,8 @@ namespace raftlog::log
         encoded.insert(encoded.end(), payload.begin(), payload.end());
         return encoded;
     }
+
+    // decode bytes into check crc is the same and the entire transfer is full
     std::optional<DecodeResponse> DecodeRecord(std::vector<std::byte> record)
     {
         if (record.size() < 8)
