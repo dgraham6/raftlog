@@ -1,5 +1,7 @@
 #include "raftlog/log/segment.hpp"
 #include <zlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <iostream>
 
 namespace raftlog::log
@@ -69,13 +71,19 @@ namespace raftlog::log
     }
 
     Segment::Segment(std::filesystem::path path, std::uint64_t base_offset)
-        : path_(std::move(path)), base_offset_(base_offset) {}
+        : path_(std::move(path)), base_offset_(base_offset), next_offset_(base_offset) {}
 
     std::uint64_t Segment::Append(std::vector<std::byte> payload)
     {
-        (void)payload;
         // TODO(phase 1): write length-prefixed record + CRC, return new offset.
-        return 0;
+        int fd = open(path_.c_str(), O_RDWR | O_CREAT | O_APPEND, 0644);
+        int res = write(fd, payload.data(), payload.size());
+        if (res == -1)
+        {
+            perror("Segment::Append write");
+            return -1;
+        }
+        return next_offset_++;
     }
 
     std::optional<Record> Segment::Read(std::uint64_t offset) const

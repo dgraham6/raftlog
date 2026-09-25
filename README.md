@@ -8,6 +8,8 @@ A hand-written, learning-focused C++ project combining two things from
 2. A from-scratch Raft implementation, used the way Redpanda does it:
    replicating actual partition data, not just cluster metadata.
 
+Inspired after read DDIA, and wanting to hand code after work for my sanity (outside of leetcode).
+
 See [PLAN.md](PLAN.md) for the phased roadmap
 ## Build
 
