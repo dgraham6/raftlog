@@ -20,3 +20,4 @@ encode decode
 Use crc for cheksum
 correct tradeoff on collision and scale 
 
+Write files to temp_directory path, cleanup should be some time of RAII down the line
