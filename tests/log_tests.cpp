@@ -1,8 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 #include <cstddef>
+#include <fcntl.h>
 #include "raftlog/log/log.hpp"
 #include "raftlog/log/segment.hpp"
+#include "raftlog/log/unique_fd.hpp"
 #include <iostream>
 
 using namespace raftlog::log;
@@ -96,4 +98,16 @@ TEST_CASE("read", "[log]")
     std::optional<Record> r = s.Read(0);
     REQUIRE(r);
     REQUIRE(r->payload == p);
+}
+
+TEST_CASE("RAII", "[log]")
+{
+    int captured = -1;
+    {
+        std::filesystem::path path = std::filesystem::temp_directory_path() / "read_test.log";
+        UniqueFd Ufd(path.c_str(), O_RDWR | O_CREAT | O_APPEND);
+        captured = Ufd.get_fd();
+        REQUIRE(captured != -1);
+    }
+    REQUIRE(fcntl(captured, F_GETFD) == -1);
 }
