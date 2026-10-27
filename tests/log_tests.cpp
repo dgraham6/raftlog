@@ -111,3 +111,26 @@ TEST_CASE("RAII", "[log]")
     }
     REQUIRE(fcntl(captured, F_GETFD) == -1);
 }
+TEST_CASE("append writes encoded bytes to disk", "[log]")
+{
+    std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "append_size_test.log";
+    std::filesystem::remove(path);
+
+    Segment s(path, 0);
+
+    std::vector<std::vector<std::byte>> payloads = {
+        std::vector<std::byte>(1, std::byte{0x61}),
+        std::vector<std::byte>(5, std::byte{0x62}),
+        std::vector<std::byte>(37, std::byte{0x63}),
+    };
+
+    std::uintmax_t expected = 0;
+    for (std::uint64_t i = 0; i < payloads.size(); ++i)
+    {
+        REQUIRE(s.Append(payloads[i]) == i);
+        expected += EncodeRecord(payloads[i]).size();
+    }
+
+    REQUIRE(std::filesystem::file_size(path) == expected);
+}
