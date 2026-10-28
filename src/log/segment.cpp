@@ -1,8 +1,10 @@
 #include "raftlog/log/segment.hpp"
+#include "raftlog/log/unique_fd.hpp"
 #include <zlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <iostream>
+#include <system_error>
 
 namespace raftlog::log
 {
@@ -66,7 +68,7 @@ namespace raftlog::log
             return std::nullopt;
         }
 
-        std::vector<std::byte> res(record.begin() + 4, record.end());
+        std::vector<std::byte> res(record.begin() + 8, record.end());
         return DecodeResponse{res};
     }
 
@@ -76,21 +78,62 @@ namespace raftlog::log
     std::uint64_t Segment::Append(std::vector<std::byte> payload)
     {
         // TODO(phase 1): write length-prefixed record + CRC, return new offset.
-        int fd = open(path_.c_str(), O_RDWR | O_CREAT | O_APPEND, 0644);
-        int res = write(fd, payload.data(), payload.size());
+        UniqueFd Ufd(path_.c_str(), O_RDWR | O_CREAT | O_APPEND);
+        int fd = Ufd.get_fd();
+
+        if (fd == -1)
+        {
+            throw std::system_error(errno, std::system_category(), "Segment::Append write");
+        }
+
+        std::vector<std::byte> encoded = EncodeRecord(payload);
+        ssize_t res = write(fd, encoded.data(), encoded.size());
         if (res == -1)
         {
-            perror("Segment::Append write");
-            return -1;
+            throw std::system_error(errno, std::system_category(), "Segment::Append write");
         }
+        positions_.push_back(positions_.back() + encoded.size());
         return next_offset_++;
     }
 
     std::optional<Record> Segment::Read(std::uint64_t offset) const
     {
-        (void)offset;
         // TODO(phase 1): seek via index, verify CRC, return the record.
-        return std::nullopt;
+        if (offset < base_offset() || offset >= next_offset_)
+        {
+            return std::nullopt;
+        }
+
+        UniqueFd Ufd(path_.c_str(), O_RDWR);
+        int fd = Ufd.get_fd();
+        if (fd == -1)
+        {
+            return std::nullopt;
+        }
+        std::vector<std::byte> buff(8);
+        ssize_t res = pread(fd, buff.data(), 8, positions_[offset - base_offset()]);
+        if (res != 8)
+        {
+            return std::nullopt;
+        }
+
+        int crc = get_u32_le(buff, 0);
+        int length = get_u32_le(buff, 4);
+        buff.resize(length + 8);
+        res = pread(fd, buff.data() + 8, length, positions_[offset - base_offset()] + 8);
+        if (res != length)
+        {
+            return std::nullopt;
+        }
+
+        std::optional<DecodeResponse> decoded = DecodeRecord(buff);
+
+        if (!decoded)
+        {
+            return std::nullopt;
+        }
+
+        return Record{offset, decoded->payload};
     }
 
     std::size_t Segment::SizeBytes() const
