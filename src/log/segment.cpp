@@ -139,7 +139,7 @@ namespace raftlog::log
     std::size_t Segment::SizeBytes() const
     {
         // TODO(phase 1): on-disk size, used to decide when to roll.
-        return 0;
+        return positions_.back();
     }
 
 } // namespace raftlog::log
